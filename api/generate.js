@@ -2,21 +2,32 @@ import { higgsfield } from '@higgsfield/client/v2';
 
 export const config = { maxDuration: 60 };
 
-// On définit Nano Banana Pro comme modèle par défaut
 const MODEL = process.env.HF_IMAGE_MODEL || 'nano-banana-pro';
 
 export default async function handler(req, res) {
+  // 1. Autorisations CORS (C'est ce qui débloque la sécurité du navigateur)
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // 2. Réponse immédiate pour la vérification de sécurité du navigateur
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   res.setHeader('Cache-Control', 'no-store');
+  
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
   if (!process.env.HF_CREDENTIALS && !process.env.HF_API_KEY) {
     res.status(500).json({ error: 'HF_CREDENTIALS non configurée sur le serveur' }); return;
   }
+  
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
     const { prompt, seed } = body;
     if (!prompt || prompt.length < 10) { res.status(400).json({ error: 'Prompt manquant' }); return; }
 
-    // Injection de tes paramètres spécifiques dans la requête Higgsfield
     const jobSet = await higgsfield.subscribe(MODEL, {
       input: { 
         prompt: prompt + " unlimited -2k", 
