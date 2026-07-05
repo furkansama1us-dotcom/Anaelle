@@ -246,7 +246,7 @@ function openSheet(date,time){const day=byDate[date];if(!day)return;const it=day
   document.getElementById('sheetHead').innerHTML=`${chipHTML(it.typeKey)}<span class="time">${esc(it.time)}</span><span style="color:var(--muted);font-size:13px">· ${esc(it.duree)}</span><button class="x" onclick="closeSheet()">✕</button>`;
   let h='';
   h+=`<div class="field"><div class="k">Lieu</div><div class="lieu-box"><b>${esc(it.lieu)}</b>${esc(it.lieuDetail)}</div></div>`;
-  h+=`<div class="field"><div class="k">Prompt final — prêt pour Higgsfield (EN)</div><div class="prompt-box" id="pf">${esc(it.promptFinal)}</div><button class="copybtn" id="cpMain">${icoCopy()} Copier le prompt</button><button class="genbtn" id="genMain">${icoSpark()} Générer dans Higgsfield ↗</button><div id="genArea" class="gen-area"></div></div>`;
+  h+=`<div class="field"><div class="k">Prompt final — prêt pour Higgsfield (EN)</div><div class="prompt-box" id="pf">${esc(it.promptFinal)}</div><button class="copybtn" id="cpMain">${icoCopy()} Copier le prompt</button><button class="genbtn" id="genMain">${icoSpark()} Ouvrir dans Higgsfield ↗</button><div id="genArea" class="gen-area"></div></div>`;
   if(it.legende&&it.typeKey!=='story'){
     h+=`<div class="field"><div class="k">Légende à publier <button class="mini-copy" data-cp="leg">${icoCopy()}Copier</button></div><div class="txt-box" id="leg">${esc(it.legende)}</div></div>`;
     h+=`<div class="field"><div class="k">Hashtags <button class="mini-copy" data-cp="tags">${icoCopy()}Copier</button></div><div class="txt-box hashtags" id="tags">${esc(it.hashtags)}</div></div>`;
@@ -278,7 +278,7 @@ function icoCam(){return '<svg width="14" height="14" viewBox="0 0 24 24" fill="
 function icoSpark(){return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M18 6l-2.5 2.5M8.5 15.5L6 18"/></svg>';}
 function icoDl(){return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 11l5 5 5-5M5 21h14"/></svg>';}
 function backendReady(){return CONFIG.genEndpoint && /^https?:$/.test(location.protocol);}
-function onGenerate(it){ if(backendReady()) generateBackend(it); else genHiggsfield(it.promptFinal); }
+function onGenerate(it){ genHiggsfield(it.promptFinal); }
 async function generateBackend(it){
   const area=document.getElementById('genArea'); if(!area)return;
   area.innerHTML=`<div class="gen-loading"><span class="spin"></span>Génération en cours… (~20-40 s, ne ferme pas la fenêtre)</div>`;
@@ -294,8 +294,16 @@ async function generateBackend(it){
     genHiggsfield(it.promptFinal);
   }
 }
-function genHiggsfield(txt){const open=()=>{window.open('https://higgsfield.ai/generate/image','_blank','noopener');toast('Prompt copié — colle-le dans la barre de prompt');};
-  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(open,()=>{fallback(txt,()=>{});open();});}else{fallback(txt,()=>{});open();}}
+function genHiggsfield(txt){
+  try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).catch(function(){try{fallback(txt,function(){});}catch(e){}}); } else { fallback(txt,function(){}); } }catch(e){}
+  var a=document.createElement('a');
+  a.href='https://higgsfield.ai/generate/image';
+  a.target='_blank'; a.rel='noopener';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function(){ if(a&&a.parentNode) a.parentNode.removeChild(a); },150);
+  toast('Prompt copié — génère sur ordinateur (illimité)');
+}
 renderDashboard();
 setInterval(()=>{if(document.getElementById('view-dashboard').classList.contains('active'))renderDashboard();},60000);
 </script></body></html>
