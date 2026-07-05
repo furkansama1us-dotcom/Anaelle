@@ -1,40 +1,60 @@
+// Vercel Serverless Function — génération via TON Soul (Anaelle 2.0), côté serveur.
+// La clé Higgsfield reste dans les variables d'environnement Vercel, jamais dans le HTML.
 import { higgsfield } from '@higgsfield/client/v2';
 
 export const config = { maxDuration: 60 };
 
-// On remet le vrai code technique du modèle. Ton Soul ID fera la transformation visuelle !
-const MODEL = process.env.HF_IMAGE_MODEL || 'flux-pro/kontext/max/text-to-image';
+// --- Réglages (surchargeable via variables d'env Vercel) ---
+// Endpoint du modèle SOUL : c'est le SEUL modèle qui accepte un Soul entraîné.
+const ENDPOINT = process.env.HF_ENDPOINT || '/v1/text2image/soul';
+// Ton Soul "Anaelle 2.0" (l'ID que tu m'as donné). Mets-le plutôt en variable d'env HF_SOUL_ID.
+const SOUL_ID  = process.env.HF_SOUL_ID  || '77227054-5967-422b-87af-43e4c388fabe';
+// Qualité max du modèle Soul = 1080p (il n'y a pas de palier "2k" ici).
+const QUALITY  = process.env.HF_QUALITY  || '1080p';
+const BATCH    = Number(process.env.HF_BATCH || 1);        // 1 ou 4
+const STRENGTH = Number(process.env.HF_SOUL_STRENGTH || 1); // fidélité au Soul (0..1)
+
+// Ratio -> dimensions réelles supportées par le modèle Soul.
+// 9:16 exact = 1152x2048 (~2K de haut). C'est le plus proche de ton "2k / 9:16".
+function sizeFor(aspect) {
+  if (process.env.HF_SIZE) return process.env.HF_SIZE; // force globale si tu veux
+  switch (aspect) {
+    case '9:16': return '1152x2048'; // stories / reels (9:16, ~2K)
+    case '4:5':
+    case '3:4':  return '1536x2048'; // posts feed (portrait proche 4:5)
+    case '1:1':  return '1536x1536';
+    case '16:9': return '2048x1152';
+    default:     return '1152x2048';
+  }
+}
 
 export default async function handler(req, res) {
-  // Autorisations pour éviter que Safari bloque la connexion
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
-
+  if (req.method === 'OPTIONS') { res.status(200).end(); return; }
   res.setHeader('Cache-Control', 'no-store');
-  
+
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
   if (!process.env.HF_CREDENTIALS && !process.env.HF_API_KEY) {
-    res.status(500).json({ error: 'HF_CREDENTIALS non configurée sur le serveur' }); return;
+    res.status(500).json({ error: 'HF_CREDENTIALS non configurée sur Vercel' }); return;
   }
-  
+
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
-    const { prompt, seed } = body;
+    const { prompt, aspect_ratio = '9:16', seed } = body;
     if (!prompt || prompt.length < 10) { res.status(400).json({ error: 'Prompt manquant' }); return; }
 
-    const jobSet = await higgsfield.subscribe(MODEL, {
-      input: { 
-        prompt: prompt + " unlimited -2k", 
-        aspect_ratio: '9:16',              
-        safety_tolerance: 2, 
-        soul_id: '77227054-5967-422b-87af-43e4c388fabe',
-        ...(seed ? { seed } : {}) 
+    const jobSet = await higgsfield.subscribe(ENDPOINT, {
+      input: {
+        prompt,                                   // <-- prompt propre (rien à ajouter dedans)
+        width_and_height: sizeFor(aspect_ratio),  // 9:16 -> 1152x2048
+        quality: QUALITY,                         // '1080p'
+        batch_size: BATCH,                        // 1
+        custom_reference_id: SOUL_ID,             // <-- TON SOUL va ICI (pas "soul_id")
+        custom_reference_strength: STRENGTH,      // 1 = fidélité max au visage
+        enhance_prompt: true,
+        ...(seed ? { seed } : {})
       },
       withPolling: true,
     });
