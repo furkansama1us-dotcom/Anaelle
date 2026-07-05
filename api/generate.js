@@ -1,3 +1,7 @@
+import { higgsfield } from '@higgsfield/client/v2';
+
+export const config = { maxDuration: 60 };
+
 // On définit Nano Banana Pro comme modèle par défaut
 const MODEL = process.env.HF_IMAGE_MODEL || 'nano-banana-pro';
 
@@ -9,7 +13,6 @@ export default async function handler(req, res) {
   }
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
-    // On force l'extraction du prompt
     const { prompt, seed } = body;
     if (!prompt || prompt.length < 10) { res.status(400).json({ error: 'Prompt manquant' }); return; }
 
@@ -19,7 +22,7 @@ export default async function handler(req, res) {
         prompt: prompt + " unlimited -2k", // Ajoute automatiquement tes instructions de qualité
         aspect_ratio: '9:16',              // Force le format vertical
         safety_tolerance: 2, 
-        soul_id: 'ID_DE_TON_SOUL_ICI',     // Remplace par la vraie chaîne de caractères de ton Soul
+        soul_id: 'TON_SOUL_ID_ICI',        // Remplace par la vraie chaîne de caractères de ton Soul
         ...(seed ? { seed } : {}) 
       },
       withPolling: true,
