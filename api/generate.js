@@ -1,13 +1,5 @@
-// Vercel Serverless Function — proxy sécurisé vers Higgsfield.
-// La clé n'est JAMAIS envoyée au navigateur : elle vit dans les variables
-// d'environnement Vercel (HF_CREDENTIALS = "KEY_ID:KEY_SECRET").
-import { higgsfield } from '@higgsfield/client/v2';
-
-export const config = { maxDuration: 60 }; // laisse le temps à l'image de se générer
-
-// Modèle par défaut (photoréaliste). Change-le via la variable d'env HF_IMAGE_MODEL
-// si tu veux (ex. un modèle Soul pour la cohérence du visage).
-const MODEL = process.env.HF_IMAGE_MODEL || 'flux-pro/kontext/max/text-to-image';
+// On définit Nano Banana Pro comme modèle par défaut
+const MODEL = process.env.HF_IMAGE_MODEL || 'nano-banana-pro';
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -17,11 +9,19 @@ export default async function handler(req, res) {
   }
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
-    const { prompt, aspect_ratio = '4:5', seed } = body;
+    // On force l'extraction du prompt
+    const { prompt, seed } = body;
     if (!prompt || prompt.length < 10) { res.status(400).json({ error: 'Prompt manquant' }); return; }
 
+    // Injection de tes paramètres spécifiques dans la requête Higgsfield
     const jobSet = await higgsfield.subscribe(MODEL, {
-      input: { prompt, aspect_ratio, safety_tolerance: 2, ...(seed ? { seed } : {}) },
+      input: { 
+        prompt: prompt + " unlimited -2k", // Ajoute automatiquement tes instructions de qualité
+        aspect_ratio: '9:16',              // Force le format vertical
+        safety_tolerance: 2, 
+        soul_id: 'ID_DE_TON_SOUL_ICI',     // Remplace par la vraie chaîne de caractères de ton Soul
+        ...(seed ? { seed } : {}) 
+      },
       withPolling: true,
     });
 
