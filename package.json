@@ -1,0 +1,8 @@
+{
+  "name": "studio-planner",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@higgsfield/client": "^0.2.1"
+  }
+}
