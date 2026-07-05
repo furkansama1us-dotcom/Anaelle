@@ -1,16 +1,14 @@
 import { higgsfield } from '@higgsfield/client/v2';
 
 export const config = { maxDuration: 60 };
-
-const MODEL = process.env.HF_IMAGE_MODEL || 'nano-banana-pro';
+const MODEL = 'nano-banana-pro';
 
 export default async function handler(req, res) {
-  // 1. Autorisations CORS (C'est ce qui débloque la sécurité du navigateur)
+  // 1. Autorisations CORS pour débloquer la sécurité du navigateur
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-  // 2. Réponse immédiate pour la vérification de sécurité du navigateur
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
@@ -19,8 +17,10 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
+  
+  // 2. Injection de tes clés de secours si Vercel est mal configuré
   if (!process.env.HF_CREDENTIALS && !process.env.HF_API_KEY) {
-    res.status(500).json({ error: 'HF_CREDENTIALS non configurée sur le serveur' }); return;
+    process.env.HF_CREDENTIALS = "d9830b73-ccce-4c46-be4e-6cf9fb886137:3cb726127e1c1754904deb90559902f34f48993a1913d2c6a3522059c3ee9061";
   }
   
   try {
@@ -28,6 +28,7 @@ export default async function handler(req, res) {
     const { prompt, seed } = body;
     if (!prompt || prompt.length < 10) { res.status(400).json({ error: 'Prompt manquant' }); return; }
 
+    // 3. Tes paramètres spécifiques (Soul, Format, Qualité)
     const jobSet = await higgsfield.subscribe(MODEL, {
       input: { 
         prompt: prompt + " unlimited -2k", 
