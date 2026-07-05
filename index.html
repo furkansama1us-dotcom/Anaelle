@@ -229,11 +229,11 @@ function renderDashboard(){
   const {day,now}=resolveToday();
   document.getElementById('todayDate').textContent=`${JOURS[jsWd(now)].slice(0,3)} ${now.getDate()} ${MOIS[now.getMonth()].slice(0,4)}.`;
   const items=itemsOnly(day);const nowM=now.getHours()*60+now.getMinutes();
-  let next=null,nextDate=null,tomorrow=false;
-  for(const it of items){const[h,m]=parseTime(it.time);if(h*60+m>=nowM){next=it;nextDate=new Date(now);nextDate.setHours(h,m,0,0);break;}}
-  if(!next){const nd=nextDayRoutine(now);const ni=itemsOnly(nd);if(ni.length){next=ni[0];const[h,m]=parseTime(next.time);nextDate=new Date(now.getTime()+864e5);nextDate.setHours(h,m,0,0);tomorrow=true;}}
-  window._heroNext={day,it:next,date:nextDate};
-  renderHero(next,nextDate,tomorrow,day);
+  let next=null,nextDate=null,tomorrow=false,nextDay=day;
+  for(const it of items){const[h,m]=parseTime(it.time);if(h*60+m>=nowM){next=it;nextDay=day;nextDate=new Date(now);nextDate.setHours(h,m,0,0);break;}}
+  if(!next){const nd=nextDayRoutine(now);const ni=itemsOnly(nd);if(ni.length){next=ni[0];nextDay=nd;const[h,m]=parseTime(next.time);nextDate=new Date(now.getTime()+864e5);nextDate.setHours(h,m,0,0);tomorrow=true;}}
+  window._heroNext={day:nextDay,it:next,date:nextDate};
+  renderHero(next,nextDate,tomorrow,nextDay);
   document.getElementById('todayLabel').textContent=`Aujourd'hui · ${day.theme}`;
   const tl=document.getElementById('todayTl');tl.innerHTML='';
   items.forEach(it=>{const[h,m]=parseTime(it.time);const done=(h*60+m)<nowM;const isNext=(next&&!tomorrow&&it===next);tl.appendChild(slotEl(day,it,done,isNext));});
