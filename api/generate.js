@@ -19,10 +19,10 @@ export default async function handler(req, res) {
     // Injection de tes paramètres spécifiques dans la requête Higgsfield
     const jobSet = await higgsfield.subscribe(MODEL, {
       input: { 
-        prompt: prompt + " unlimited -2k", // Ajoute automatiquement tes instructions de qualité
-        aspect_ratio: '9:16',              // Force le format vertical
+        prompt: prompt + " unlimited -2k", 
+        aspect_ratio: '9:16',              
         safety_tolerance: 2, 
-        soul_id: 'TON_SOUL_ID_ICI',        // Remplace par la vraie chaîne de caractères de ton Soul
+        soul_id: '77227054-5967-422b-87af-43e4c388fabe',
         ...(seed ? { seed } : {}) 
       },
       withPolling: true,
