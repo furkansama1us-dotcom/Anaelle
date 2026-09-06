@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Validation — Anaelle</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root{--bg:#0f0f12;--card:#1a1a1f;--ink:#f2f0eb;--ink-soft:#a9a6b0;--accent:#e8c4a0;--ok:#7bc67e;--danger:#e07a7a;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
+  .wrap{max-width:1100px;margin:0 auto;padding:24px 16px 80px}
+  h1{font-size:1.3rem;font-weight:700;margin:0 0 4px}
+  .sub{color:var(--ink-soft);font-size:.9rem;margin:0 0 24px}
+  #login{max-width:360px;margin:15vh auto;text-align:center}
+  #login input{width:100%;padding:14px 16px;border-radius:12px;border:1px solid #333;background:#1c1c22;color:var(--ink);font-size:1rem;margin-bottom:12px}
+  #login button, .btn{padding:12px 18px;border-radius:10px;border:none;font-weight:600;cursor:pointer;font-size:.95rem}
+  #login button{width:100%;background:var(--accent);color:#231a12}
+  #loginError{color:var(--danger);font-size:.85rem;min-height:1.2em;margin-top:8px}
+  .day-group{margin-bottom:32px}
+  .day-title{font-size:1rem;font-weight:700;color:var(--accent);margin:0 0 14px;padding-bottom:8px;border-bottom:1px solid #262630}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+  .card{background:var(--card);border-radius:16px;overflow:hidden;border:1px solid #26262f}
+  .card img,.card video{width:100%;aspect-ratio:9/16;object-fit:cover;display:block;background:#000}
+  .card .meta{padding:12px 14px}
+  .chip{display:inline-block;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:6px;background:#2a2a34;color:var(--ink-soft);margin-bottom:6px}
+  .chip.story{background:#3a2e4a;color:#c9a8f0}
+  .chip.post{background:#2e3a4a;color:#a8c9f0}
+  .chip.reel{background:#4a2e3a;color:#f0a8c9}
+  .time{font-size:.8rem;color:var(--ink-soft)}
+  .caption{font-size:.85rem;margin:6px 0 12px;color:var(--ink);line-height:1.4}
+  .actions{display:flex;gap:8px}
+  .actions .btn{flex:1;font-size:.85rem;padding:10px}
+  .btn-approve{background:var(--ok);color:#0f2e10}
+  .btn-reject{background:transparent;color:var(--danger);border:1px solid var(--danger)}
+  .btn.done{background:#2a2a34;color:var(--ink-soft);cursor:default}
+  .empty{text-align:center;color:var(--ink-soft);padding:60px 20px;font-size:.95rem}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+  .toolbar button{background:transparent;border:1px solid #333;color:var(--ink-soft);border-radius:8px;padding:8px 14px;font-size:.8rem;cursor:pointer}
+  .status-msg{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#222;padding:10px 18px;border-radius:10px;font-size:.85rem;opacity:0;transition:opacity .3s;pointer-events:none}
+  .status-msg.show{opacity:1}
+</style>
+</head>
+<body>
+
+<div id="login">
+  <h1>Validation Anaelle</h1>
+  <p class="sub">Accès privé</p>
+  <input type="password" id="pw" placeholder="Mot de passe" autocomplete="current-password">
+  <button onclick="doLogin()">Entrer</button>
+  <div id="loginError"></div>
+</div>
+
+<div class="wrap" id="app" style="display:none">
+  <div class="toolbar">
+    <div>
+      <h1>À valider</h1>
+      <p class="sub">Contenu généré pour demain — clique sur Valider pour programmer sur Instagram</p>
+    </div>
+    <button onclick="logout()">Déconnexion</button>
+  </div>
+  <div id="content"><div class="empty">Chargement…</div></div>
+</div>
+
+<div class="status-msg" id="statusMsg"></div>
+
+<script>
+const API = 'https://postiz.srv1960340.hstgr.cloud/content-api';
+let TOKEN = localStorage.getItem('anaelle_token') || '';
+
+function showStatus(msg){
+  const el = document.getElementById('statusMsg');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 2500);
+}
+
+async function doLogin(){
+  const pw = document.getElementById('pw').value;
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
+  try{
+    const r = await fetch(`${API}/login`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ password: pw })
+    });
+    if(!r.ok){ errEl.textContent = 'Mot de passe incorrect'; return; }
+    const j = await r.json();
+    TOKEN = j.token;
+    localStorage.setItem('anaelle_token', TOKEN);
+    enterApp();
+  }catch(e){ errEl.textContent = 'Erreur de connexion'; }
+}
+
+function logout(){
+  localStorage.removeItem('anaelle_token');
+  TOKEN = '';
+  document.getElementById('app').style.display='none';
+  document.getElementById('login').style.display='block';
+}
+
+function enterApp(){
+  document.getElementById('login').style.display='none';
+  document.getElementById('app').style.display='block';
+  loadPending();
+}
+
+function esc(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function isVideo(url){ return /\.(mp4|mov|webm)$/i.test(url); }
+
+async function loadPending(){
+  const contentEl = document.getElementById('content');
+  try{
+    const r = await fetch(`${API}/pending`, { headers:{ Authorization:`Bearer ${TOKEN}` } });
+    if(r.status === 401){ logout(); return; }
+    const items = await r.json();
+    if(!items.length){
+      contentEl.innerHTML = '<div class="empty">Rien à valider pour le moment ✨<br>Reviens ce soir pour le contenu de demain.</div>';
+      return;
+    }
+    const byDay = {};
+    for(const it of items){ (byDay[it.batch_date] = byDay[it.batch_date] || []).push(it); }
+    let html = '';
+    for(const day of Object.keys(byDay).sort()){
+      const dayItems = byDay[day].sort((a,b)=> a.item_time.localeCompare(b.item_time));
+      html += `<div class="day-group"><div class="day-title">${esc(day)}</div><div class="grid">`;
+      for(const it of dayItems){
+        const media = it.image_urls[0] || '';
+        const mediaTag = isVideo(media)
+          ? `<video src="${esc(media)}" muted loop playsinline onmouseover="this.play()" onmouseout="this.pause()"></video>`
+          : `<img src="${esc(media)}" loading="lazy">`;
+        html += `
+          <div class="card" data-id="${it.id}">
+            ${mediaTag}
+            <div class="meta">
+              <span class="chip ${esc(it.type)}">${esc(it.type)}</span>
+              <div class="time">${esc(it.item_time)}</div>
+              <div class="caption">${esc(it.caption) || '<em>(sans légende)</em>'}</div>
+              <div class="actions">
+                <button class="btn btn-approve" onclick="approve(${it.id}, this)">Valider</button>
+                <button class="btn btn-reject" onclick="reject(${it.id}, this)">Rejeter</button>
+              </div>
+            </div>
+          </div>`;
+      }
+      html += `</div></div>`;
+    }
+    contentEl.innerHTML = html;
+  }catch(e){
+    contentEl.innerHTML = '<div class="empty">Erreur de chargement</div>';
+  }
+}
+
+async function approve(id, btn){
+  const card = btn.closest('.card');
+  const actions = card.querySelector('.actions');
+  actions.innerHTML = '<button class="btn done">Validation…</button>';
+  try{
+    const r = await fetch(`${API}/approve`, {
+      method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${TOKEN}`},
+      body: JSON.stringify({ ids:[id] })
+    });
+    const j = await r.json();
+    const res = j.results && j.results[0];
+    if(res && res.status === 'scheduled'){
+      actions.innerHTML = '<button class="btn done">✓ Programmé</button>';
+      showStatus('Contenu programmé sur Instagram');
+    } else {
+      actions.innerHTML = `<button class="btn done">Erreur</button>`;
+      showStatus((res && res.error) || 'Erreur inconnue');
+    }
+  }catch(e){
+    actions.innerHTML = '<button class="btn done">Erreur</button>';
+  }
+}
+
+async function reject(id, btn){
+  const card = btn.closest('.card');
+  card.style.opacity = '0.3';
+  try{
+    await fetch(`${API}/reject`, {
+      method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${TOKEN}`},
+      body: JSON.stringify({ ids:[id] })
+    });
+    card.remove();
+  }catch(e){ card.style.opacity = '1'; }
+}
+
+document.getElementById('pw').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
+if(TOKEN){ enterApp(); }
+</script>
+</body>
+</html>
